@@ -9,6 +9,7 @@
     "build:tests": "babel test/specs --out-dir test/dist",
     "build": "npm run build:source && npm run build:tests",
     "patch": "npm run eslint && npm run build && npm test && npm version patch",
+    "postpublish": "git push && git push --tags",
     "rename": "node rename",
     "test": "node node_modules/mocha/bin/mocha --reporter spec test/dist/*"
   },
