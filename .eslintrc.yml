@@ -23,8 +23,8 @@ rules:
     {
       vars: all,
       args: all,
-      varsIgnorePattern: "[iI]gnored",
-      argsIgnorePattern: "[iI]gnored"
+      varsIgnorePattern: "[iI]gnored?",
+      argsIgnorePattern: "[iI]gnored?"
     }
   ]
 parserOptions:
