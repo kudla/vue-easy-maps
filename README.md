@@ -1,1 +1,1 @@
-# npm-package-template
+# vue-easy-maps
