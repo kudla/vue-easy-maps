@@ -1,11 +1,14 @@
-import {EasyMap} from 'easy-maps';
-import {MapEngine} from '../map-engine';
+import {EasyMap, verifyEngine} from 'easy-maps';
+import {MapTarget} from '../map-target';
 
 export const ENGINE_STATUSES = {
-    PENDING: 'pending',
     RESOLVED: '',
-    INVALID: 'invalid',
-    NONE: 'none'
+    ENGINE_PENDING: 'engine-pending',
+    ENGINE_INVALID: 'engine-invalid',
+    MAP_PENDING: 'map-panding',
+    MAP_INVALID: 'map-invalid',
+    NO_ENGINE: 'no-engine',
+    NO_MAP: 'no-map'
 };
 
 export const MapPrototype = {
@@ -18,9 +21,9 @@ export const MapPrototype = {
     },
     template:  `
         <div :class="className">
-            <map-engine v-if="isEngineResolved">
+            <map-target v-if="isEngineResolved">
                 <slot/>
-            </map-engine>
+            </map-target>
         </div>
     `,
     computed: {
@@ -29,64 +32,95 @@ export const MapPrototype = {
             return map instanceof EasyMap;
         },
         className() {
-            let {mapStatus} = this;
+            let {mapStatus, engine} = this;
+            let {engineName} = engine || {};
+            engineName = engineName && engineName.replace(/(\s+|(?=(?!\b)[A-Z]))/g, '-').toLowerCase();
+
             return [
                 'easy-map',
                 {
-                    [`easy-map_engine-${mapStatus}`]: mapStatus
+                    [`easy-map_${mapStatus}`]: mapStatus,
+                    [`easy-map_${engineName}`]: engineName
                 }
 
             ];
         },
         mapStatus() {
             const {
-                PENDING,
                 RESOLVED,
-                INVALID,
-                NONE
+                ENGINE_PENDING,
+                ENGINE_INVALID,
+                MAP_PENDING,
+                MAP_INVALID,
+                NO_ENGINE,
+                NO_MAP
             } = ENGINE_STATUSES;
-            let {map} = this;
+            let {map, engine} = this;
+            if (engine === null || engine === undefined) {
+                return NO_ENGINE;
+            }
+            if (engine instanceof Promise) {
+                return ENGINE_PENDING;
+            }
+            if (engine instanceof Error) {
+                return ENGINE_INVALID;
+            }
             if (map === null || map === undefined) {
-                return NONE;
+                return NO_MAP;
             }
             if (map instanceof Promise) {
-                return PENDING;
+                return MAP_PENDING;
             }
             if (map instanceof EasyMap) {
                 return RESOLVED;
             }
-            return INVALID;
+            return MAP_INVALID;
         }
     },
     mounted() {
-        let {engine: Engine} = this;
-        this.resolveEngine(Engine);
+        let {engine} = this;
+        this.setEngine(engine);
     },
     methods: {
-        resolveEngine(Engine) {
-            if (Engine instanceof Promise) {
-                let enginePromise = Engine
-                    .then(Engine => {
-                        if (this.engine === enginePromise) {
-                            this.resolveEngine(Engine);
-                        }
-                    });
-                this.engine = enginePromise;
-                return;
+        setEngine(engine) {
+            engine = this.resolveEngine(engine);
+            this.engine = engine;
+            let {Map} = engine;
+            if (Map) {
+                let {$props, engineOptions} = this;
+                this.setMap(new Map($props, engineOptions));
             }
-            if (!EasyMap.isPrototypeOf(Engine)) {
-                throw new Error('Engine should extend EasyMap');
-            }
-            this.engine = Engine;
-            let {$props, engineOptions} = this;
-            this.resolveMap(new Engine($props, engineOptions));
         },
-        resolveMap(value) {
+        resolveEngine(engine) {
+            if (engine instanceof Promise) {
+                let enginePromise = engine;
+                let resolveValue = value => {
+                    if (this.engine === enginePromise) {
+                        this.setEngine(value);
+                    }
+                };
+                enginePromise
+                    .then(resolveValue, resolveValue);
+                return enginePromise;
+            }
+            if (engine instanceof Error) {
+                return engine;
+            }
+
+            try {
+                verifyEngine(engine);
+                return engine;
+            } catch (error) {
+                return error;
+            }
+
+        },
+        setMap(value) {
             if (value instanceof Promise) {
                 this.map = value;
                 value.then(map => {
                     if(this.map === value) {
-                        this.resolveMap(map);
+                        this.setMap(map);
                     }
                 });
                 return;
@@ -94,10 +128,12 @@ export const MapPrototype = {
             if (!(value instanceof EasyMap)) {
                 throw new Error('Map should be instance of EasyMap');
             }
+            let {View} = this.engine;
+            this.view = new View(value);
             this.map = value;
         }
     },
     components: {
-        'map-engine': MapEngine
+        'map-target': MapTarget
     }
 };

@@ -1,20 +1,20 @@
-import {EasyMap} from 'easy-maps';
+import {verifyEngine} from 'easy-maps';
 import {MapPrototype} from './map';
 
-export function MapFactory(Engine, options) {
-    if(!(EasyMap.isPrototypeOf(Engine) || Engine instanceof Promise)) {
-        throw new Error('Should init component with EasyMap or Promise');
+export function MapFactory(engine, options) {
+    if(!(engine instanceof Promise)) {
+        verifyEngine(engine);
     }
     let ImplementedMap = Object.create(MapPrototype);
     ImplementedMap.data = function() {
         let data = MapPrototype.data.apply(this, arguments);
         return Object.assign(data, {
-            engine: Engine,
+            engine: engine,
             engineOptions: options
         });
     };
     ImplementedMap.then = function() {
-        Promise.resolve(Engine).then(...arguments);
+        Promise.resolve(engine).then(...arguments);
     };
     return ImplementedMap;
 }
