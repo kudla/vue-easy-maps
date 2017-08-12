@@ -1,5 +1,5 @@
 import {verifyEngine} from 'easy-maps';
-import {MapPrototype} from './map';
+import {MapPrototype} from './components/map';
 
 export function MapFactory(engine, options) {
     if(!(engine instanceof Promise)) {
