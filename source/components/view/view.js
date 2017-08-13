@@ -17,7 +17,7 @@ export const View = Vue.component('map-view', {
     render() {
         // should access props to make vue watch them
         this.viewSource();
-        this.view.updateProps();
+        this.view.mutateProps();
     },
     props: {
         zoom: NumerableType,
